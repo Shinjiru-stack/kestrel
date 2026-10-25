@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Kestrel",
+  "version": "0.1.0",
+  "identifier": "com.kestrel.desktop",
+  "build": {
+    "frontendDist": "ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Kestrel - Cluster Intelligence",
+        "width": 1500,
+        "height": 960,
+        "minWidth": 1180,
+        "minHeight": 720,
+        "decorations": false,
+        "resizable": true,
+        "center": true,
+        "visible": true,
+        "focus": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "Kestrel",
+    "copyright": "Copyright (c) 2026 Kestrel",
+    "category": "DeveloperTool",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "shortDescription": "Cluster intelligence and approval-gated remediation for Kubernetes.",
+    "longDescription": "Kestrel is a local-first desktop cluster observatory for Kubernetes. It combines live snapshots, deterministic diagnostics, multi-provider AI analysis, and approval-gated remediation in one workspace."
+  }
+}

@@ -1,0 +1,42 @@
+# Build output
+/target/
+/crates/kestrel/gen/
+*.exe
+*.msi
+*.msix
+*.pdb
+*.lib
+*.exp
+*.d
+
+# Legacy prototype (kept outside the repository)
+/backend/
+/frontend/
+node_modules/
+dist/
+
+# Local logs and editor state
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local cluster credentials and provider secrets
+.env
+.env.*
+*.kubeconfig
+kubeconfig*.yaml
+!kubeconfig.example.yaml
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local developer tools
+/tools/kubectl.exe
+/tools/brand-preview*.html
+
+# Temporary files
+*.tmp
+*.bak

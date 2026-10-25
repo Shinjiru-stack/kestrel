@@ -1,0 +1,31 @@
+[package]
+name = "kestrel-core"
+description = "Kubernetes diagnostics, healing rules, and multi-provider AI adapters for Kestrel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+chrono.workspace = true
+futures.workspace = true
+k8s-openapi.workspace = true
+kube.workspace = true
+regex.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+rustls = { version = "0.23", features = ["aws_lc_rs"] }
+tokio = { version = "1", features = ["full", "test-util"] }
