@@ -8,6 +8,14 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Shinjiru-stack/kestrel/releases/latest"><strong>Download for Windows</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#using-kestrel">How to use</a>
+  &nbsp;·&nbsp;
+  <a href="#requirements">Prerequisites</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/Shinjiru-stack/kestrel/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Shinjiru-stack/kestrel/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB">
   <img alt="Rust 2024" src="https://img.shields.io/badge/Rust-2024-000000">
@@ -145,11 +153,26 @@ The frontend has no direct network access. Its CSP allows scripts, styles, image
 
 ### Requirements
 
+To install the release:
+
 - Windows 10/11 with the WebView2 Runtime (present on current Windows builds)
-- Rust 1.90+ with the MSVC toolchain
-- Visual Studio 2022 Build Tools with **Desktop development with C++**
 - A Kubernetes cluster and a kubeconfig reachable from this machine
 - Optional: Ollama for a fully local model, or an API key for a cloud provider
+
+To build from source, you also need:
+
+- Rust 1.90+ with the MSVC toolchain
+- Visual Studio 2022 Build Tools with **Desktop development with C++**
+- Node.js is not required; the UI is static and embedded at build time
+
+### Install the release
+
+Download the latest Windows build from [Releases](https://github.com/Shinjiru-stack/kestrel/releases/latest):
+
+- `Kestrel_0.1.0_x64-setup.exe` — NSIS installer, recommended
+- `Kestrel_0.1.0_x64_en-US.msi` — WiX/MSI installer
+
+Run the installer and launch **Kestrel**. The build is not code-signed, so Windows SmartScreen may warn on first launch. The first window is 1500 × 960, frameless, centered, and resizable down to 1180 × 720. It opens on **Overview** and connects using the kubeconfig it finds.
 
 ### Build and run
 
@@ -166,8 +189,6 @@ Or use Cargo directly:
 ```powershell
 cargo run -p kestrel
 ```
-
-The first window is 1500 × 960, frameless, centered, and resizable down to 1180 × 720. The app opens on **Overview** and connects using the kubeconfig it finds.
 
 ### Connect a cluster
 
@@ -193,6 +214,21 @@ Open **Settings → AI providers**, select Ollama, and confirm the base URL (`ht
 ### Use a cloud provider
 
 Open **Settings → AI providers**, choose a provider, paste a key, pick a model, and press **Test** to list models and measure latency. Press **Save**, then **Use** to make it active. Keys are stored locally in `%APPDATA%\com.kestrel.desktop\settings.json` in plaintext; see [Security notes](#security-notes).
+
+## Using Kestrel
+
+Kestrel is read-only until you approve a mutation. A typical session:
+
+1. **Connect.** On launch, Kestrel tries the default kubeconfig. If the header does not show **LIVE**, open **Settings → Connection**, choose the kubeconfig and context, and select **Save & connect**. See [Connect a cluster](#connect-a-cluster).
+2. **Read the overview.** The health score, node and workload pressure, restart count, AI briefing, and **Attention required** queue tell you where to start. Select a row to open it.
+3. **Inspect the failure.** Open **Workloads**, filter by namespace or health, and select a pod. The drawer shows conditions, deterministic findings, containers, current and previous-container logs, and events. Use previous-container logs after a restart.
+4. **Diagnose.** In the drawer's **AI** tab, select **Run diagnosis**. Review severity, confidence, evidence, recommended actions, the verification command, and prevention notes. The raw model output and token usage are available.
+5. **Ask Copilot.** Open **AI Copilot** for whole-cluster or pod-scoped questions. Prompt suggestions follow the current failures, and the context panel shows what the model can see.
+6. **Review security.** Open **Security** to see Trivy Operator reports, severity totals, exposure score, and affected images. **Re-scan** refreshes the reports; **Ask Copilot** sends the current summary to chat.
+7. **Approve a remediation.** From a diagnosis or the pod drawer, choose a recommended action, review the exact JSON payload and blast radius, and confirm. Destructive actions require typing the resource name and are disabled by default in **Settings → Safety**.
+8. **Check the audit trail.** **Settings → Audit log** shows every requested mutation and its outcome. The same record is stored in `%APPDATA%\com.kestrel.desktop\audit.json`.
+
+Use `Ctrl K` for the command palette, `Ctrl R` to refresh, and `?` for the shortcut sheet. The full key map is [below](#keyboard).
 
 ## Providers
 
