@@ -147,7 +147,7 @@ flowchart LR
 | AI transport | `reqwest` 0.13 / rustls | Provider APIs, streaming, model discovery |
 | State | `serde` JSON | Local settings and audit trail |
 
-The frontend has no direct network access. Its CSP allows scripts, styles, images, fonts, and Tauri IPC from the app origin; cluster and provider traffic goes through Rust. Streaming AI output and cluster updates arrive as Tauri events (`ai://delta`, `cluster://snapshot`, `cluster://status`).
+The frontend has no direct network access. Its CSP allows scripts, styles, images, fonts, and Tauri IPC from the app origin; cluster and provider traffic goes through Rust. The UI polls the snapshot every 20 seconds while visible and refreshes on focus; AI streaming output arrives as the `ai://delta` Tauri event.
 
 ## Quick start
 
