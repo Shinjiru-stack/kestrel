@@ -39,7 +39,7 @@ export function openConfirm({
   }, 40);
 }
 
-export function openInfo({ title, sub = "", tone = "info", iconName = "info", body = "", target = "" }) {
+export function openInfo({ title, sub = "", tone = "info", iconName = "info", body = "", target = "", hideFoot = false }) {
   current = {
     title,
     sub,
@@ -47,6 +47,7 @@ export function openInfo({ title, sub = "", tone = "info", iconName = "info", bo
     iconName,
     body,
     target,
+    hideFoot,
     confirmLabel: "Done",
     confirmTone: "primary",
     requireText: "",
@@ -125,9 +126,13 @@ export function renderModal() {
           : ""
       }
     </div>
-    <div class="modal__foot">
+    ${
+      current.hideFoot
+        ? ""
+        : `<div class="modal__foot">
       <button class="btn btn--ghost" data-action="modal-close">Cancel</button>
       <button class="btn ${current.confirmTone === "danger" ? "btn--danger" : "btn--primary"}" data-action="modal-confirm">${escapeHtml(current.confirmLabel)}</button>
-    </div>
+    </div>`
+    }
   `;
 }

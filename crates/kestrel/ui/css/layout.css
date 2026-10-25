@@ -145,6 +145,33 @@ kbd {
   letter-spacing: 0.14em;
   color: var(--text-soft);
 }
+.update-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid rgba(158, 240, 192, 0.34);
+  border-radius: var(--r-pill);
+  background: var(--mint-soft);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--mint);
+  transition: background var(--dur-fast), border-color var(--dur-fast);
+}
+.update-pill[hidden] {
+  display: none;
+}
+.update-pill:hover {
+  background: rgba(158, 240, 192, 0.18);
+  border-color: rgba(158, 240, 192, 0.55);
+}
+.update-pill .icon {
+  width: 12px;
+  height: 12px;
+}
 .status-dot {
   position: relative;
   display: inline-block;
@@ -160,6 +187,9 @@ kbd {
 }
 .status-dot[data-status="warning"] {
   background: var(--amber);
+}
+.status-dot[data-status="error"] {
+  background: var(--coral);
 }
 .status-dot[data-status="disconnected"],
 .status-dot[data-status="error"] {

@@ -13,16 +13,24 @@
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
   <title id="title">Kestrel — Cluster Intelligence</title>
-  <desc id="desc">Kestrel social card with the winged-K mark, wordmark, and product positioning.</desc>
+  <desc id="desc">Kestrel social card with the Flight-path K mark, wordmark, and product positioning.</desc>
   <defs>
     <linearGradient id="page" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
       <stop stop-color="#0a100d"/>
       <stop offset="1" stop-color="#040705"/>
     </linearGradient>
-    <linearGradient id="mint" x1="120" y1="120" x2="380" y2="460" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#d8ffe7"/>
-      <stop offset=".48" stop-color="#9ef0c0"/>
+    <linearGradient id="flight-a" x1="22" y1="23" x2="56" y2="7" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e2ffec"/>
+      <stop offset=".55" stop-color="#9ef0c0"/>
       <stop offset="1" stop-color="#5fd897"/>
+    </linearGradient>
+    <linearGradient id="flight-b" x1="17" y1="10" x2="22" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c5ffd9"/>
+      <stop offset="1" stop-color="#52c98c"/>
+    </linearGradient>
+    <linearGradient id="flight-c" x1="21" y1="34" x2="50" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9ef0c0"/>
+      <stop offset="1" stop-color="#3f9f6e"/>
     </linearGradient>
     <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="translate(270 230) rotate(52) scale(620 480)" gradientUnits="userSpaceOnUse">
       <stop stop-color="#9ef0c0" stop-opacity=".18"/>
@@ -37,12 +45,13 @@
   <rect width="1280" height="640" fill="url(#halo)"/>
   <g transform="translate(84 152)">
     <rect x="0" y="0" width="220" height="220" rx="50" fill="#0a100d" stroke="#9ef0c0" stroke-opacity=".18"/>
-    <g transform="translate(28 22) scale(5.8) translate(-1.2 0)">
-      <path d="M10 7.4v17.2" fill="none" stroke="url(#mint)" stroke-width="2.2" stroke-linecap="round"/>
-      <path d="M10 16c4.2-3.2 8.9-6.8 14.4-8.9" fill="none" stroke="url(#mint)" stroke-width="2.2" stroke-linecap="round"/>
-      <path d="M10 16c4.2 3.2 8.9 6.8 14.4 8.9" fill="none" stroke="url(#mint)" stroke-width="2.2" stroke-linecap="round"/>
-      <circle cx="25.1" cy="6.9" r="1.8" fill="#d8ffe7"/>
-      <circle cx="10" cy="16" r="1.15" fill="#9ef0c0"/>
+    <g transform="translate(-17.8 -7) scale(3.6)">
+      <path fill="url(#flight-b)" d="M17 10 23 10 22 52 19 58 16 52 15 10Z"/>
+      <path fill="url(#flight-a)" d="M24 23C35 17 46 10 56 7L52 15 44 17 38 26 30 24 27 30Z"/>
+      <path fill="url(#flight-c)" d="M23 34C32 39 41 47 50 58L42 57 38 50 31 52 27 44Z"/>
+      <circle cx="55" cy="8" r="2.3" fill="#e2ffec"/>
+      <circle cx="49.5" cy="57.5" r="1.6" fill="#9ef0c0"/>
+      <circle cx="21" cy="32" r="1.5" fill="#e2ffec"/>
     </g>
   </g>
   <text x="360" y="240" fill="#f4fff8" font-family="Sora, Inter, Segoe UI, sans-serif" font-size="104" font-weight="600" letter-spacing="16">KESTREL</text>

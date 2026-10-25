@@ -7,6 +7,7 @@ use kestrel_core::models::{
     ActionSpec, AuditEntry, ClusterSnapshot, Diagnosis, LogResponse, PodDetail, SecurityReport,
 };
 use kestrel_core::settings::{ProviderKind, Settings, default_kubeconfig};
+use kestrel_core::updates::{self, UpdateInfo};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -20,6 +21,7 @@ pub struct Bootstrap {
     settings: Settings,
     audit: Vec<AuditEntry>,
     app_version: String,
+    platform: String,
     is_tauri: bool,
 }
 
@@ -45,8 +47,16 @@ pub async fn get_bootstrap(state: State<'_, AppState>) -> Result<Bootstrap, Stri
         settings: inner.settings.clone(),
         audit: inner.audit.entries.clone(),
         app_version: env!("CARGO_PKG_VERSION").to_string(),
+        platform: std::env::consts::OS.to_string(),
         is_tauri: true,
     })
+}
+
+#[tauri::command]
+pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
+    updates::check(env!("CARGO_PKG_VERSION"))
+        .await
+        .map_err(|err| format!("{err:#}"))
 }
 
 #[tauri::command]
@@ -101,7 +111,13 @@ pub async fn connect_cluster(
 #[tauri::command]
 pub async fn refresh_snapshot(state: State<'_, AppState>) -> Result<ClusterSnapshot, String> {
     let client = client(&state).await?;
-    let snapshot = client.snapshot().await.map_err(|err| format!("{err:#}"))?;
+    let snapshot = match client.snapshot().await {
+        Ok(snapshot) => snapshot,
+        Err(err) => {
+            clear_connection(&state).await;
+            return Err(format!("Cluster link lost: {err:#}"));
+        }
+    };
     state.inner.write().await.snapshot = Some(snapshot.clone());
     Ok(snapshot)
 }

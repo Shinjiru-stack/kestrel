@@ -90,7 +90,7 @@ function getPath(target, path) {
 }
 
 function applyPreferences() {
-  document.documentElement.dataset.theme = state.theme || "dark";
+  document.documentElement.dataset.theme = state.theme || "light";
   document.documentElement.dataset.density = state.density || "comfortable";
   document.documentElement.dataset.motion = state.settings?.appearance?.reduceMotion ? "reduced" : "full";
 }
@@ -166,10 +166,34 @@ function applySnapshot(snapshot) {
   emit();
 }
 
+function resetClusterData() {
+  state.snapshot = null;
+  state.history = [];
+  state.lastUpdated = null;
+  state.security = {
+    ...state.security,
+    reports: [],
+    loading: false,
+    loaded: false,
+    error: "",
+    selected: null,
+  };
+  resetDrawer();
+}
+
+function markDisconnected(message) {
+  state.connected = false;
+  state.connecting = false;
+  state.connectionError = message || "Cluster link lost.";
+  resetClusterData();
+  emit();
+}
+
 async function connect() {
   if (state.connecting) return;
   state.connecting = true;
   state.connectionError = "";
+  resetClusterData();
   emit();
   bootStatus("Opening kubeconfig and probing the API server");
   try {
@@ -190,11 +214,9 @@ async function connect() {
     startBackground();
   } catch (err) {
     state.connecting = false;
-    state.connected = false;
-    state.connectionError = err?.message || String(err);
+    markDisconnected(err?.message || String(err));
     state.booted = true;
     hideBoot();
-    emit();
     addToast({
       tone: "error",
       title: "Could not reach the cluster",
@@ -224,15 +246,107 @@ async function refreshSnapshot({ silent = false } = {}) {
     }
   } catch (err) {
     const message = err?.message || String(err);
+    // Any failed poll means the displayed snapshot can no longer be trusted.
+    // Clear it immediately so a dead tunnel never looks like a healthy cluster.
+    markDisconnected(message);
     if (!silent) addToast({ tone: "error", title: "Refresh failed", description: message, timeout: 6000 });
-    if (/not connected|no cluster/i.test(message)) {
-      state.connected = false;
-      state.connectionError = message;
-      emit();
-    }
   } finally {
     refreshing = false;
   }
+}
+
+async function checkForUpdates({ silent = true, force = false } = {}) {
+  if (state.update.checking) return;
+  if (!force && state.update.checkedAt) {
+    const age = Date.now() - state.update.checkedAt.getTime();
+    if (age < 6 * 60 * 60 * 1000) return;
+  }
+  state.update.checking = true;
+  state.update.error = "";
+  emit();
+  try {
+    const info = await bridge.checkForUpdates();
+    state.update.info = info || null;
+    state.update.checked = true;
+    state.update.checkedAt = new Date();
+    if (!silent) {
+      if (info) {
+        addToast({
+          tone: "info",
+          title: `Kestrel ${info.latestVersion} is available`,
+          description: "Open the release page to download the update.",
+          timeout: 7000,
+        });
+      } else {
+        addToast({
+          tone: "success",
+          title: "Kestrel is up to date",
+          description: `You are running ${state.appVersion}.`,
+          timeout: 3600,
+        });
+      }
+    }
+  } catch (err) {
+    state.update.error = err?.message || String(err);
+    if (!silent) {
+      addToast({
+        tone: "error",
+        title: "Update check failed",
+        description: state.update.error,
+        timeout: 7000,
+      });
+    }
+  } finally {
+    state.update.checking = false;
+    emit();
+  }
+}
+
+function openUpdateModal() {
+  const info = state.update.info;
+  if (!info) {
+    checkForUpdates({ silent: false, force: true });
+    return;
+  }
+  const notes = (info.notes || "").trim();
+  openInfo({
+    title: `Kestrel ${info.latestVersion} is available`,
+    sub: `You are running ${info.currentVersion}. Installing stays a manual step.`,
+    tone: "info",
+    iconName: "download",
+    hideFoot: true,
+    body: `${
+      notes
+        ? `<pre class="update-notes">${escapeHtml(notes)}</pre>`
+        : `<p class="faint">See the release page for the full release notes.</p>`
+    }
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn--primary" data-action="update-release">${icon("external")} Open release page</button>
+        <button class="btn btn--ghost" data-action="update-dismiss">Remind me later</button>
+      </div>`,
+  });
+}
+
+function dismissUpdate() {
+  const info = state.update.info;
+  if (info?.latestVersion) {
+    state.update.dismissedVersion = info.latestVersion;
+    localStorage.setItem("kh-dismissed-update", info.latestVersion);
+  }
+  closeModal();
+  emit();
+}
+
+function openUpdateRelease() {
+  const url = state.update.info?.url || "";
+  if (!/^https?:\/\//i.test(url)) {
+    addToast({ tone: "warning", title: "Link blocked", description: "Only http(s) links can be opened." });
+    return;
+  }
+  bridge.openUrl(url).catch((err) =>
+    addToast({ tone: "error", title: "Could not open release page", description: err?.message || String(err) })
+  );
+  closeModal();
 }
 
 function startBackground() {
@@ -242,13 +356,12 @@ function startBackground() {
   unsubStatus = bridge.onStatus((status) => {
     if (!status) return;
     if (status.connected === false) {
-      state.connected = false;
-      state.connectionError = status.detail || status.message || "cluster link lost";
+      markDisconnected(status.detail || status.message || "Cluster link lost.");
     } else if (status.connected === true) {
       state.connected = true;
       state.connectionError = "";
+      emit();
     }
-    emit();
   });
   pollTimer = setInterval(() => {
     if (state.connected && document.visibilityState === "visible") refreshSnapshot({ silent: true });
@@ -264,10 +377,22 @@ function renderSidebar() {
   if (nameEl) nameEl.textContent = cluster?.name || (state.connecting ? "connecting…" : "no cluster");
   if (metaEl) {
     metaEl.textContent = cluster
-      ? `${cluster.provider || "k8s"} · ${cluster.version || "unknown"}`
+      ? `${cluster.provider || "k8s"} · ${cluster.version || "unknown"}${snapshot?.warnings?.length ? " · partial data" : ""}`
       : state.connectionError
         ? "link offline"
         : "waiting for link";
+  }
+
+  const updatePill = document.getElementById("update-pill");
+  if (updatePill) {
+    const info = state.update?.info;
+    const visible = Boolean(info?.latestVersion && info.latestVersion !== state.update?.dismissedVersion);
+    updatePill.hidden = !visible;
+    if (visible) {
+      const label = document.getElementById("update-pill-label");
+      if (label) label.textContent = `Update ${info.latestVersion}`;
+      updatePill.title = `Kestrel ${info.latestVersion} is available`;
+    }
   }
 
   const linkPill = document.getElementById("link-pill");
@@ -289,8 +414,8 @@ function renderSidebar() {
 
   const pulseHost = document.getElementById("sidebar-pulse");
   if (pulseHost) {
-    const values = state.history.map((h) => Number(h.cpu) || 0);
-    const html = sparkline(values.length ? values : [0.38, 0.42, 0.36, 0.45, 0.4], {
+    const values = state.connected ? state.history.map((h) => Number(h.cpu) || 0) : [0, 0];
+    const html = sparkline(values, {
       width: 210,
       height: 44,
       pad: 3,
@@ -302,6 +427,8 @@ function renderSidebar() {
       lastPulseHtml = html;
     }
   }
+  const pulseLive = document.getElementById("pulse-live");
+  if (pulseLive) pulseLive.innerHTML = `<i></i> ${state.connected ? "LIVE" : "OFFLINE"}`;
 
   const podsBadge = document.getElementById("nav-pods-badge");
   if (podsBadge) {
@@ -371,24 +498,43 @@ function disconnectedView() {
   </div>`;
 }
 
+function snapshotWarning() {
+  const warnings = state.snapshot?.warnings || [];
+  if (!state.connected || !warnings.length) return "";
+  const shown = warnings.slice(0, 2).map((warning) => escapeHtml(warning)).join(" · ");
+  const extra = warnings.length > 2 ? ` · +${warnings.length - 2} more` : "";
+  return `<div class="data-warning" role="status">
+    ${icon("alert")}
+    <div><strong>Partial cluster data.</strong> ${shown}${extra}</div>
+  </div>`;
+}
+
 function currentView() {
-  if (!state.snapshot) {
+  if (!state.connected || !state.snapshot) {
     return state.route === "settings" ? renderSettings(state) : disconnectedView();
   }
+  let view = "";
   switch (state.route) {
     case "workloads":
-      return renderWorkloads(state);
+      view = renderWorkloads(state);
+      break;
     case "nodes":
-      return renderNodes(state);
+      view = renderNodes(state);
+      break;
     case "copilot":
-      return renderCopilot(state);
+      view = renderCopilot(state);
+      break;
     case "security":
-      return renderSecurity(state);
+      view = renderSecurity(state);
+      break;
     case "settings":
-      return renderSettings(state);
+      view = renderSettings(state);
+      break;
     default:
-      return renderOverview(state);
+      view = renderOverview(state);
+      break;
   }
+  return `${snapshotWarning()}${view}`;
 }
 
 function captureFocus() {
@@ -504,6 +650,7 @@ function render() {
 
 async function loadSecurity({ force = false, silent = false } = {}) {
   const sec = state.security;
+  if (!state.connected || !state.snapshot) return;
   if (sec.loading) return;
   if (sec.loaded && !force) return;
   sec.loading = true;
@@ -918,6 +1065,18 @@ async function handleAction(el, event) {
       break;
     case "settings":
       navigate("settings", { tab: el.id === "provider-chip" ? "providers" : "connection" });
+      break;
+    case "update-open":
+      openUpdateModal();
+      break;
+    case "update-check":
+      checkForUpdates({ silent: false, force: true });
+      break;
+    case "update-release":
+      openUpdateRelease();
+      break;
+    case "update-dismiss":
+      dismissUpdate();
       break;
     case "open-url": {
       const url = el.dataset.url || "";
@@ -1401,6 +1560,7 @@ async function boot() {
     state.settings = data?.settings || state.settings;
     state.audit = data?.audit || [];
     state.appVersion = data?.appVersion || state.appVersion;
+    state.platform = data?.platform || (state.isTauri ? "desktop" : "browser");
     state.settingsUi.expandedProvider = state.settings?.activeProvider || "ollama";
     state.theme = state.settings?.appearance?.theme || state.theme;
     state.density = state.settings?.appearance?.density || state.density;
@@ -1418,6 +1578,7 @@ async function boot() {
     emit();
     addToast({ tone: "error", title: "Startup failed", description: state.connectionError, timeout: 8000 });
   }
+  setTimeout(() => checkForUpdates({ silent: true }), 2200);
 }
 
 boot();

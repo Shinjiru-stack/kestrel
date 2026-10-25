@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Shinjiru-stack/kestrel/releases/latest"><strong>Download for Windows</strong></a>
+  <a href="https://github.com/Shinjiru-stack/kestrel/releases/latest"><strong>Download for Windows, Linux, or macOS</strong></a>
   &nbsp;·&nbsp;
   <a href="#using-kestrel">How to use</a>
   &nbsp;·&nbsp;
@@ -21,15 +21,17 @@
   <img alt="Rust 2024" src="https://img.shields.io/badge/Rust-2024-000000">
   <img alt="Kubernetes" src="https://img.shields.io/badge/Kubernetes-1.35-326CE5">
   <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%2F11-0078D4">
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-x64-FCC624">
+  <img alt="macOS 11+" src="https://img.shields.io/badge/macOS-11%2B-000000">
   <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-9EF0C0">
-  <img alt="Version 0.1.0" src="https://img.shields.io/badge/status-v0.1.0-52C98C">
+  <img alt="Version 0.1.1" src="https://img.shields.io/badge/status-v0.1.1-52C98C">
 </p>
 
-Kestrel is a Windows desktop app for Kubernetes operators who want the whole picture without handing a model the keys. It reads a kubeconfig, speaks directly to the API server, and turns a live cluster snapshot into a ranked, evidence-backed diagnosis. Every mutation is prepared as an exact payload, shown for approval, and written to a local audit trail.
+Kestrel is a cross-platform desktop app for Kubernetes operators who want the whole picture without handing a model the keys. It reads a kubeconfig, speaks directly to the API server, and turns a live cluster snapshot into a ranked, evidence-backed diagnosis. Every mutation is prepared as an exact payload, shown for approval, and written to a local audit trail. Native builds are produced for Windows, Linux, and macOS.
 
 It is built with a Rust backend and a static HTML/CSS/vanilla-ES-module frontend inside Tauri 2. There is no Node.js runtime, React, bundler, or web server in the shipped app.
 
-> Screenshots below are from a live k3s cluster (`v1.35.5+k3s1`) running deliberately broken demo workloads. No mock data.
+> Screenshots below use Kestrel's built-in preview dataset with deliberately broken demo workloads, shown in the default light theme. The same views render live cluster data when the desktop app is connected.
 
 ## Why Kestrel
 
@@ -107,7 +109,7 @@ Supported actions are restart workload, delete pod, patch image, patch resources
 <p align="center">
   <img src="docs/screenshots/approval.png" alt="Kestrel approval modal with exact mutation payload" width="100%">
   <br>
-  <sub><strong>Approval.</strong> The exact mutation, its blast radius, and a type-to-confirm step before anything reaches the API server.</sub>
+  <sub><strong>Approval.</strong> The exact mutation and its blast radius are shown before anything reaches the API server. Destructive actions also require typing the resource name.</sub>
 </p>
 
 ### Settings that stay local
@@ -153,42 +155,68 @@ The frontend has no direct network access. Its CSP allows scripts, styles, image
 
 ### Requirements
 
-To install the release:
+To install a release:
 
-- Windows 10/11 with the WebView2 Runtime (present on current Windows builds)
-- A Kubernetes cluster and a kubeconfig reachable from this machine
-- Optional: Ollama for a fully local model, or an API key for a cloud provider
+- **Windows 10/11** with the WebView2 Runtime (present on current Windows builds).
+- **Linux x64**: Ubuntu 22.04+ or Debian 12+ with WebKitGTK 4.1, or a distribution that provides it. The AppImage is portable, but it still uses the host WebKitGTK and GTK 3 libraries.
+- **macOS 11+** on Intel or Apple Silicon.
+- A Kubernetes cluster and a kubeconfig reachable from this machine.
+- Optional: Ollama for a fully local model, or an API key for a cloud provider.
 
 To build from source, you also need:
 
-- Rust 1.90+ with the MSVC toolchain
-- Visual Studio 2022 Build Tools with **Desktop development with C++**
-- Node.js is not required; the UI is static and embedded at build time
+- Rust 1.90+.
+- **Windows:** Visual Studio 2022 Build Tools with **Desktop development with C++** and the MSVC Rust toolchain.
+- **Linux:** `build-essential`, `pkg-config`, `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `libgtk-3-dev`, `libxdo-dev`, and `patchelf`. The CI workflow installs the complete list.
+- **macOS:** Xcode Command Line Tools.
+- Node.js is not required; the UI is static and embedded at build time.
 
 ### Install the release
 
-Download the latest Windows build from [Releases](https://github.com/Shinjiru-stack/kestrel/releases/latest):
+Download the latest build from [Releases](https://github.com/Shinjiru-stack/kestrel/releases/latest). Asset names include the version and platform:
 
-- `Kestrel_0.1.0_x64-setup.exe` — NSIS installer, recommended
-- `Kestrel_0.1.0_x64_en-US.msi` — WiX/MSI installer
+**Windows**
 
-Run the installer and launch **Kestrel**. The build is not code-signed, so Windows SmartScreen may warn on first launch. The first window is 1500 × 960, frameless, centered, and resizable down to 1180 × 720. It opens on **Overview** and connects using the kubeconfig it finds.
+- `Kestrel_0.1.1_x64-setup.exe` — NSIS installer, recommended
+- `Kestrel_0.1.1_x64_en-US.msi` — WiX/MSI installer
+
+**Linux**
+
+- `kestrel_0.1.1_amd64.deb` — Debian/Ubuntu package
+- `kestrel-0.1.1-1.x86_64.rpm` — Fedora/RHEL package
+- `Kestrel_0.1.1_amd64.AppImage` — portable executable
+
+**macOS**
+
+- `Kestrel_0.1.1_aarch64.dmg` — Apple Silicon
+- `Kestrel_0.1.1_x64.dmg` — Intel
+
+Run the installer and launch **Kestrel**. The first window is 1500 × 960, frameless, centered, and resizable down to 1180 × 720. It opens on **Overview** and connects using the kubeconfig it finds.
+
+The builds are not code-signed. Windows SmartScreen may warn on first launch. On macOS, Control-click the app and choose **Open** the first time, or remove the quarantine attribute:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Kestrel.app
+```
+
+On Linux, install the `.deb` or `.rpm` with your package manager. For the AppImage:
+
+```bash
+chmod +x Kestrel_0.1.1_amd64.AppImage
+./Kestrel_0.1.1_amd64.AppImage
+```
 
 ### Build and run
 
-```powershell
+```bash
 git clone https://github.com/Shinjiru-stack/kestrel.git
 cd kestrel
 
 cargo build -p kestrel
-.\target\debug\kestrel.exe
-```
-
-Or use Cargo directly:
-
-```powershell
 cargo run -p kestrel
 ```
+
+On Windows the binary is `target\debug\kestrel.exe`; on Linux and macOS it is `target/debug/kestrel`.
 
 ### Connect a cluster
 
@@ -196,11 +224,23 @@ Kestrel reads a kubeconfig from disk and speaks directly to the API server. It d
 
 The default path order is:
 
-1. `KUBECONFIG` (first path if the value contains a list)
-2. `%USERPROFILE%\.kube\k3s-healer.yaml`
-3. `%USERPROFILE%\.kube\config`
+1. `KUBECONFIG` (first path if the value contains a list; `;` on Windows, `:` on Linux and macOS)
+2. `~/.kube/k3s-healer.yaml` (`%USERPROFILE%\.kube\k3s-healer.yaml` on Windows)
+3. `~/.kube/config` (`%USERPROFILE%\.kube\config` on Windows)
 
 Set a different file or context in **Settings → Connection**, then choose **Save & connect**. Leave the context blank to use the kubeconfig's current context. The API endpoint is observed from the active kubeconfig after connecting.
+
+Kestrel stores settings and the audit trail in the platform app-data directory:
+
+| Platform | Directory |
+| --- | --- |
+| Windows | `%APPDATA%\com.kestrel.desktop` |
+| Linux | `~/.local/share/com.kestrel.desktop` |
+| macOS | `~/Library/Application Support/com.kestrel.desktop` |
+
+### Updates
+
+Kestrel checks the public GitHub release feed once per launch. You can also run a check from **Settings → About → Check now**. When a newer release exists, a mint **Update** pill appears in the title bar; it opens the release notes and the GitHub release page. Kestrel does not download or install updates silently, does not run an update daemon, and does not use a private update server. If GitHub is unreachable or rate-limited, the check reports the error in Settings and cluster work continues normally.
 
 ### Use a local model
 
@@ -213,20 +253,20 @@ Open **Settings → AI providers**, select Ollama, and confirm the base URL (`ht
 
 ### Use a cloud provider
 
-Open **Settings → AI providers**, choose a provider, paste a key, pick a model, and press **Test** to list models and measure latency. Press **Save**, then **Use** to make it active. Keys are stored locally in `%APPDATA%\com.kestrel.desktop\settings.json` in plaintext; see [Security notes](#security-notes).
+Open **Settings → AI providers**, choose a provider, paste a key, pick a model, and press **Test** to list models and measure latency. Press **Save**, then **Use** to make it active. Keys are stored locally in `settings.json` in the platform app-data directory, in plaintext; see [Security notes](#security-notes).
 
 ## Using Kestrel
 
 Kestrel is read-only until you approve a mutation. A typical session:
 
-1. **Connect.** On launch, Kestrel tries the default kubeconfig. If the header does not show **LIVE**, open **Settings → Connection**, choose the kubeconfig and context, and select **Save & connect**. See [Connect a cluster](#connect-a-cluster).
+1. **Connect.** On launch, Kestrel tries the default kubeconfig. If the header does not show **LIVE**, open **Settings → Connection**, choose the kubeconfig and context, and select **Save & connect**. See [Connect a cluster](#connect-a-cluster). The interface starts in light mode; **Settings → Appearance** switches to dark mode.
 2. **Read the overview.** The health score, node and workload pressure, restart count, AI briefing, and **Attention required** queue tell you where to start. Select a row to open it.
 3. **Inspect the failure.** Open **Workloads**, filter by namespace or health, and select a pod. The drawer shows conditions, deterministic findings, containers, current and previous-container logs, and events. Use previous-container logs after a restart.
 4. **Diagnose.** In the drawer's **AI** tab, select **Run diagnosis**. Review severity, confidence, evidence, recommended actions, the verification command, and prevention notes. The raw model output and token usage are available.
 5. **Ask Copilot.** Open **AI Copilot** for whole-cluster or pod-scoped questions. Prompt suggestions follow the current failures, and the context panel shows what the model can see.
 6. **Review security.** Open **Security** to see Trivy Operator reports, severity totals, exposure score, and affected images. **Re-scan** refreshes the reports; **Ask Copilot** sends the current summary to chat.
 7. **Approve a remediation.** From a diagnosis or the pod drawer, choose a recommended action, review the exact JSON payload and blast radius, and confirm. Destructive actions require typing the resource name and are disabled by default in **Settings → Safety**.
-8. **Check the audit trail.** **Settings → Audit log** shows every requested mutation and its outcome. The same record is stored in `%APPDATA%\com.kestrel.desktop\audit.json`.
+8. **Check the audit trail.** **Settings → Audit log** shows every requested mutation and its outcome. The same record is stored in the platform app-data directory (`audit.json`); see [Connect a cluster](#connect-a-cluster) for the path on each platform.
 
 Use `Ctrl K` for the command palette, `Ctrl R` to refresh, and `?` for the shortcut sheet. The full key map is [below](#keyboard).
 
@@ -260,7 +300,7 @@ Default guardrails:
 - Memory ceiling: 1024 MiB for generated OOM resource patches; OOM patch count is capped at 3 before Kestrel stops suggesting another increase.
 - Replica count: negative values are rejected.
 - Log redaction: best-effort removal of secret-looking JSON fields and bearer tokens before logs are displayed or sent as model context. This is not a substitute for keeping secrets out of logs.
-- Audit: every requested mutation and its outcome is written to `%APPDATA%\com.kestrel.desktop\audit.json`. This is a local application record, not Kubernetes API-server audit logging.
+- Audit: every requested mutation and its outcome is written to `audit.json` in the platform app-data directory. This is a local application record, not Kubernetes API-server audit logging.
 - No autonomous loop: Kestrel has no controller, watcher, or background mutation worker. Nothing changes without an approval.
 
 The model is advisory. Evidence and the exact mutation are the source of truth.
@@ -292,6 +332,7 @@ crates/
     src/healer.rs          Deterministic pod checks and remediation suggestions
     src/models.rs          Serializable domain models
     src/settings.rs        Settings model, provider defaults, kubeconfig discovery
+    src/updates.rs         GitHub release check and semantic version comparison
 
   kestrel/                 Tauri 2 desktop shell
     src/commands.rs        Commands, safety enforcement, audit, event streaming
@@ -317,9 +358,10 @@ Tauri embeds `crates/kestrel/ui/` at build time. After changing HTML, CSS, or Ja
 
 ## Development
 
-```powershell
-# Formatting and build checks
+```bash
+# Formatting, lint, and build checks
 cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
 cargo build -p kestrel
 
 # Workspace tests
@@ -346,7 +388,7 @@ node tools/provider-mock.mjs
 
 It listens on `127.0.0.1:18999`. It is not bundled into the app.
 
-### WebView2 inspection
+### WebView2 inspection (Windows)
 
 Launch the debug app with remote debugging enabled:
 
@@ -365,24 +407,23 @@ These harnesses are development utilities, not part of the product.
 
 ### Build a release
 
-```powershell
+```bash
 cargo build --release -p kestrel
-.\target\release\kestrel.exe
 ```
 
-To produce an installer bundle, install the Tauri CLI and run it from the app crate:
+To produce a native installer bundle, install the Tauri CLI and run it from the app crate:
 
-```powershell
+```bash
 cargo install tauri-cli --version "^2" --locked
-cd crates\kestrel
+cd crates/kestrel
 cargo tauri build
 ```
 
-The bundle targets the host platform (WiX/MSI and NSIS on Windows, when those tools are available). Output is written under `target\release\bundle\`.
+The bundle targets the host platform: MSI/NSIS on Windows, deb/rpm/AppImage on Linux, and DMG on macOS. Output is written under `target/release/bundle/` (or `target/<triple>/release/bundle/` when `--target` is used). The CI workflow builds Windows x64, Linux x64, macOS Apple Silicon, and macOS Intel bundles, and publishes them when a `v*` tag is pushed.
 
 ## Security notes
 
-- **API keys are stored in plaintext** in `%APPDATA%\com.kestrel.desktop\settings.json`. The file is inside the per-user profile, but it is not encrypted by the app. Use full-disk encryption and restrictive Windows account permissions on shared machines.
+- **API keys are stored in plaintext** in `settings.json` in the platform app-data directory. The file is inside the per-user profile, but it is not encrypted by the app. Use full-disk encryption and restrictive account permissions on shared machines.
 - Kestrel never sends keys to a Kestrel-operated server. Keys go to the configured provider endpoint; GitHub Copilot first exchanges its token at `api.github.com`. Changing a base URL changes where requests go, so use a trusted endpoint.
 - Cluster credentials come from the kubeconfig. Kestrel does not copy them into its settings or audit log.
 - Log redaction is best-effort pattern matching. It catches common secret-looking JSON fields and bearer tokens, not every possible secret format. Do not rely on it as a data-loss-prevention system.
@@ -393,7 +434,7 @@ The bundle targets the host platform (WiX/MSI and NSIS on Windows, when those to
 
 ## Limitations
 
-- Windows is the validated platform. Linux and macOS builds are not tested in this repository.
+- Windows is the locally validated runtime. Linux and macOS bundles are built in CI and are unsigned; run them in a test environment before relying on them for production operations.
 - One kubeconfig and one cluster at a time.
 - Provider keys are not in the OS keychain yet.
 - Security posture requires Trivy Operator `VulnerabilityReport` custom resources. Kestrel reads reports; it does not scan images itself.

@@ -875,6 +875,27 @@
   background: linear-gradient(160deg, var(--mint-softer), var(--bg-inset));
   margin-bottom: 14px;
 }
+.data-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 201, 120, 0.24);
+  border-radius: var(--r-md);
+  background: var(--amber-soft);
+  color: var(--text-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.data-warning .icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--amber);
+}
+.data-warning strong { color: var(--amber); font-weight: 600; }
 .connection-banner__mark {
   display: grid;
   place-items: center;

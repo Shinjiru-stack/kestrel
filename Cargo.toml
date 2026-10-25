@@ -6,7 +6,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 authors = ["Kestrel"]
@@ -15,21 +15,16 @@ rust-version = "1.90"
 
 [workspace.dependencies]
 anyhow = "1"
-async-trait = "0.1"
-base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3"
 k8s-openapi = { version = "0.28", features = ["v1_35"] }
-kube = { version = "4.2", features = ["runtime", "client", "rustls-tls", "jsonpatch", "gzip"] }
+kube = { version = "4.2", features = ["client", "rustls-tls"] }
 regex = "1"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream", "gzip"] }
+semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde_yaml = "0.9"
-thiserror = "2"
 tokio = { version = "1", features = ["full"] }
-tokio-util = { version = "0.7" }
-tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 url = "2"

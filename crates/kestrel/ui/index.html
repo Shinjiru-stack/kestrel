@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -14,12 +14,13 @@
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-    <symbol id="i-logo" viewBox="0 0 32 32">
-      <path d="M10 7.4v17.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-      <path d="M10 16c4.2-3.2 8.9-6.8 14.4-8.9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-      <path d="M10 16c4.2 3.2 8.9 6.8 14.4 8.9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-      <circle cx="25.1" cy="6.9" r="1.8" fill="currentColor"/>
-      <circle cx="10" cy="16" r="1.15" fill="currentColor"/>
+    <symbol id="i-logo" viewBox="0 0 64 64">
+      <path fill="currentColor" opacity=".95" d="M17 10 23 10 22 52 19 58 16 52 15 10Z"/>
+      <path fill="currentColor" opacity=".78" d="M24 23C35 17 46 10 56 7L52 15 44 17 38 26 30 24 27 30Z"/>
+      <path fill="currentColor" opacity=".62" d="M23 34C32 39 41 47 50 58L42 57 38 50 31 52 27 44Z"/>
+      <circle cx="55" cy="8" r="2.3" fill="currentColor"/>
+      <circle cx="49.5" cy="57.5" r="1.6" fill="currentColor" opacity=".75"/>
+      <circle cx="21" cy="32" r="1.5" fill="currentColor"/>
     </symbol>
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></symbol>
     <symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 2.8 8.2 4.7v9.4L12 21.6l-8.2-4.7V7.5L12 2.8Z"/><path d="m3.8 7.5 8.2 4.7 8.2-4.7M12 12.2v9.4"/></symbol>
@@ -107,6 +108,10 @@
         <kbd>Ctrl K</kbd>
       </button>
       <div class="titlebar__right">
+        <button class="update-pill" id="update-pill" data-action="update-open" hidden>
+          <svg class="icon"><use href="#i-download"></use></svg>
+          <span id="update-pill-label">Update available</span>
+        </button>
         <div class="link-pill" id="link-pill" title="Cluster connection">
           <span class="status-dot" data-status="connected"></span>
           <span id="link-label">LIVE</span>
@@ -158,7 +163,7 @@
         <div class="pulse-card">
           <div class="pulse-card__head">
             <span class="pulse-card__title">Cluster pulse</span>
-            <span class="pulse-card__live"><i></i> LIVE</span>
+            <span class="pulse-card__live" id="pulse-live"><i></i> LIVE</span>
           </div>
           <div class="pulse-card__chart" id="sidebar-pulse"></div>
           <div class="pulse-card__stats">
@@ -181,7 +186,7 @@
             <svg class="icon"><use href="#i-settings"></use></svg><span>Settings</span>
           </a>
           <button class="nav__item" data-action="theme" title="Toggle theme">
-            <svg class="icon" id="theme-icon"><use href="#i-moon"></use></svg><span id="theme-label">Light mode</span>
+            <svg class="icon" id="theme-icon"><use href="#i-sun"></use></svg><span id="theme-label">Dark mode</span>
           </button>
         </div>
       </aside>

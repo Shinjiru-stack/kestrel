@@ -348,8 +348,29 @@ function auditTab(state) {
   </div>`;
 }
 
+function runtimeLabel(state) {
+  if (!state.isTauri) return "Browser preview";
+  const platform = String(state.platform || "").toLowerCase();
+  if (platform === "windows") return "Tauri 2 · Windows";
+  if (platform === "linux") return "Tauri 2 · Linux";
+  if (platform === "macos") return "Tauri 2 · macOS";
+  return "Tauri 2 · desktop";
+}
+
+function updateStatus(state) {
+  const update = state.update || {};
+  if (update.checking) return "Checking the public GitHub release feed…";
+  if (update.error) return `Check failed: ${update.error}`;
+  if (update.info) {
+    return `Kestrel ${update.info.latestVersion} is available. You are running ${update.info.currentVersion}.`;
+  }
+  if (update.checkedAt) return `You are up to date. Last checked ${fmtDateTime(update.checkedAt)}.`;
+  return "Not checked yet. Kestrel checks once per launch; you can also check manually.";
+}
+
 function aboutTab(state) {
   const settings = state.settings || {};
+  const update = state.update || {};
   const shortcuts = [
     ["Ctrl K", "Command palette"],
     ["Ctrl R", "Refresh snapshot"],
@@ -366,8 +387,8 @@ function aboutTab(state) {
       </div>
       <div class="settings-section__body">
         <div class="about-grid">
-          <div class="about-stat"><span>Version</span><strong>${escapeHtml(state.appVersion || "0.1.0")}</strong></div>
-          <div class="about-stat"><span>Runtime</span><strong>${state.isTauri ? "Tauri 2 · MSVC" : "Browser preview"}</strong></div>
+          <div class="about-stat"><span>Version</span><strong>${escapeHtml(state.appVersion || "0.1.1")}</strong></div>
+          <div class="about-stat"><span>Runtime</span><strong>${escapeHtml(runtimeLabel(state))}</strong></div>
           <div class="about-stat"><span>Providers</span><strong>${(settings.providers || []).length} adapters</strong></div>
           <div class="about-stat"><span>Cluster</span><strong>${escapeHtml(state.snapshot?.cluster?.name || "not connected")}</strong></div>
         </div>
@@ -376,6 +397,29 @@ function aboutTab(state) {
           <button class="btn btn--ghost" data-action="open-url" data-url="https://kubernetes.io/docs/">${icon("external")} Kubernetes docs</button>
           <button class="btn btn--ghost" data-action="open-url" data-url="https://ollama.com">${icon("sparkles")} Ollama</button>
         </div>
+      </div>
+    </section>
+    <section class="settings-section">
+      <div class="settings-section__head">
+        <div class="settings-section__title">${icon("download")} Updates</div>
+        <div class="settings-section__desc">Checks the public GitHub release feed. Installing an update remains a manual step.</div>
+      </div>
+      <div class="settings-section__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <strong>${update.info ? `Kestrel ${escapeHtml(update.info.latestVersion)} is available` : "Release channel"}</strong>
+            <small>${escapeHtml(updateStatus(state))}</small>
+          </div>
+          <div class="row">
+            <button class="btn btn--ghost" data-action="update-check" ${update.checking ? "disabled" : ""}>${icon(update.checking ? "rotate" : "refresh")} ${update.checking ? "Checking…" : "Check now"}</button>
+            ${
+              update.info
+                ? `<button class="btn btn--primary" data-action="update-release">${icon("external")} Open release</button>`
+                : ""
+            }
+          </div>
+        </div>
+        <div class="mono faint" style="margin-top:10px">Current ${escapeHtml(state.appVersion || "0.1.1")} · GitHub releases · no silent install</div>
       </div>
     </section>
     <section class="settings-section">

@@ -50,6 +50,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_bootstrap,
+            commands::check_for_updates,
             commands::connect_cluster,
             commands::refresh_snapshot,
             commands::get_pod_detail,

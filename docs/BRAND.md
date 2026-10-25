@@ -19,9 +19,11 @@ Kestrel is a product name, not an acronym. Write it as **Kestrel** in prose. Use
 
 ## The mark
 
-The mark is a winged **K**: one vertical stem, two swept wings, and a bright node at the
-leading tip. It reads as a letter at small sizes and as a hovering bird at large sizes.
-It is deliberately geometric, not literal.
+The mark is a **Flight-path K**: three tapered shards form the stem and two swept wings,
+with bright signal nodes at the leading tip, the junction, and the lower trail. The shards
+read as a letter at small sizes and as a bird correcting its flight path at large sizes.
+It is deliberately geometric, not literal. The upper shard points up-right; the lower
+shard sweeps down-right; the stem stays offset to the left.
 
 | Asset | File | Use |
 | --- | --- | --- |
@@ -62,8 +64,9 @@ other logos.
 
 ## Color
 
-Kestrel is an observatory at night: deep ink, quiet panels, and a single mint signal that
-means "live" or "safe to proceed." Severity colors are reserved for severity.
+Kestrel opens on a calm, paper-light observatory surface by default, with an obsidian
+dark theme for low-light work. A single mint signal means "live" or "safe to proceed."
+Severity colors are reserved for severity.
 
 ### Dark theme
 

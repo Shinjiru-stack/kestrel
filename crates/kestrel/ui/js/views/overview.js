@@ -104,7 +104,7 @@ export function renderOverview(state) {
     </div>
   </div>
 
-  <div class="overview-top stagger">
+  <div class="overview-top">
     <section class="panel panel--accent overview-hero">
       <div class="panel__head">
         <div class="panel__title">${icon("pulse")} Cluster health</div>

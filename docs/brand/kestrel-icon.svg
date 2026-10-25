@@ -1,24 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Kestrel app icon</title>
-  <desc id="desc">The Kestrel winged-K mark in mint on an obsidian rounded square.</desc>
+  <desc id="desc">The Flight-path K mark in mint on an obsidian rounded square.</desc>
   <defs>
     <linearGradient id="bg" x1="24" y1="20" x2="488" y2="492" gradientUnits="userSpaceOnUse">
       <stop stop-color="#131e18"/>
       <stop offset="1" stop-color="#060a08"/>
     </linearGradient>
-    <linearGradient id="mint" x1="140" y1="100" x2="400" y2="430" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#d8ffe7"/>
-      <stop offset=".48" stop-color="#9ef0c0"/>
+    <linearGradient id="flight-a" x1="22" y1="23" x2="56" y2="7" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e2ffec"/>
+      <stop offset=".55" stop-color="#9ef0c0"/>
       <stop offset="1" stop-color="#5fd897"/>
+    </linearGradient>
+    <linearGradient id="flight-b" x1="17" y1="10" x2="22" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c5ffd9"/>
+      <stop offset="1" stop-color="#52c98c"/>
+    </linearGradient>
+    <linearGradient id="flight-c" x1="21" y1="34" x2="50" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9ef0c0"/>
+      <stop offset="1" stop-color="#3f9f6e"/>
     </linearGradient>
   </defs>
   <rect x="20" y="20" width="472" height="472" rx="105" fill="url(#bg)"/>
   <rect x="20" y="20" width="472" height="472" rx="105" fill="none" stroke="#9ef0c0" stroke-opacity=".16" stroke-width="3"/>
-  <g transform="translate(-24 0)">
-    <path d="M160 118.4v275.2" fill="none" stroke="url(#mint)" stroke-width="35.2" stroke-linecap="round"/>
-    <path d="M160 256c67.2-51.2 142.4-108.8 230.4-142.4" fill="none" stroke="url(#mint)" stroke-width="35.2" stroke-linecap="round"/>
-    <path d="M160 256c67.2 51.2 142.4 108.8 230.4 142.4" fill="none" stroke="url(#mint)" stroke-width="35.2" stroke-linecap="round"/>
-    <circle cx="401.6" cy="110.4" r="28.8" fill="#d8ffe7"/>
-    <circle cx="160" cy="256" r="18.4" fill="#9ef0c0"/>
+  <g transform="translate(25.25 44.75) scale(6.5)">
+    <path fill="url(#flight-b)" d="M17 10 23 10 22 52 19 58 16 52 15 10Z"/>
+    <path fill="url(#flight-a)" d="M24 23C35 17 46 10 56 7L52 15 44 17 38 26 30 24 27 30Z"/>
+    <path fill="url(#flight-c)" d="M23 34C32 39 41 47 50 58L42 57 38 50 31 52 27 44Z"/>
+    <circle cx="55" cy="8" r="2.3" fill="#e2ffec"/>
+    <circle cx="49.5" cy="57.5" r="1.6" fill="#9ef0c0"/>
+    <circle cx="21" cy="32" r="1.5" fill="#e2ffec"/>
   </g>
 </svg>

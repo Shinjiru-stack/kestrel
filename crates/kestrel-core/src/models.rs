@@ -23,6 +23,8 @@ pub struct ClusterSnapshot {
     pub namespaces: Vec<NamespaceSummary>,
     pub events: Vec<ClusterEvent>,
     pub metrics_available: bool,
+    #[serde(default)]
+    pub warnings: Vec<String>,
     pub generated_at: String,
 }
 

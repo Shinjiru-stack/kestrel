@@ -990,7 +990,7 @@ const settings = {
     redactLogs: true,
   },
   appearance: {
-    theme: "dark",
+    theme: "light",
     density: "comfortable",
     reduceMotion: false,
     showSeconds: false,
@@ -1357,7 +1357,8 @@ export const mock = {
     return {
       settings: deepClone(mockState.settings),
       audit: deepClone(mockState.audit),
-      appVersion: "0.1.0",
+      appVersion: "0.1.1",
+      platform: "browser",
       isTauri: false,
     };
   },
@@ -1475,6 +1476,10 @@ export const mock = {
 
   async audit() {
     return deepClone(mockState.audit);
+  },
+
+  async checkForUpdates() {
+    return null;
   },
 
   subscribe(cb) {

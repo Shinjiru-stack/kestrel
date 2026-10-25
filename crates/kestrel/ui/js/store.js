@@ -69,11 +69,20 @@ export const state = {
     draft: "",
   },
   toasts: [],
-  theme: localStorage.getItem("kh-theme") || "dark",
+  theme: localStorage.getItem("kh-theme") || "light",
   density: localStorage.getItem("kh-density") || "comfortable",
   lastUpdated: null,
   isTauri: false,
-  appVersion: "0.1.0",
+  appVersion: "0.1.1",
+  platform: "browser",
+  update: {
+    checking: false,
+    checked: false,
+    checkedAt: null,
+    info: null,
+    error: "",
+    dismissedVersion: localStorage.getItem("kh-dismissed-update") || "",
+  },
 };
 
 export function getState() {

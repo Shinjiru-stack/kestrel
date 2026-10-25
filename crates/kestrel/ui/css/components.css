@@ -1642,6 +1642,24 @@
 .code-block:hover .code-block__copy {
   opacity: 1;
 }
+.update-notes {
+  max-height: 34vh;
+  margin: 0;
+  padding: 11px 12px;
+  overflow: auto;
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-sm);
+  background: var(--bg-void);
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+[data-theme="light"] .update-notes {
+  background: #eef1ea;
+}
 
 /* — suggestions — */
 .suggestion {

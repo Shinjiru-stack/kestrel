@@ -66,24 +66,20 @@ impl ClusterClient {
         let context_name = if context.trim().is_empty() {
             config.cluster_url.host().unwrap_or("cluster").to_string()
         } else {
-            context.to_string()
+            context.trim().to_string()
         };
-        let mut me = Self {
+        let me = Self {
             client,
             config,
             kubeconfig_path: kubeconfig_path.to_string(),
-            context: context_name,
+            context: context_name.clone(),
             server,
-            cluster_name: String::new(),
+            cluster_name: context_name,
         };
-        let version = me
-            .client
+        me.client
             .apiserver_version()
             .await
             .context("could not reach the Kubernetes API server")?;
-        if me.cluster_name.is_empty() {
-            me.cluster_name = version.git_version.clone();
-        }
         Ok(me)
     }
 
@@ -123,13 +119,72 @@ impl ClusterClient {
             nodes_fut, pods_fut, deploy_fut, sts_fut, ds_fut, rs_fut, events_fut
         );
 
-        let nodes = nodes_res.map(|l| l.items).unwrap_or_default();
-        let pods = pods_res.map(|l| l.items).unwrap_or_default();
-        let deployments = deploy_res.map(|l| l.items).unwrap_or_default();
-        let statefulsets = sts_res.map(|l| l.items).unwrap_or_default();
-        let daemonsets = ds_res.map(|l| l.items).unwrap_or_default();
-        let replicasets = rs_res.map(|l| l.items).unwrap_or_default();
-        let events = events_res.map(|l| l.items).unwrap_or_default();
+        let mut failures: Vec<String> = Vec::new();
+        let nodes = match nodes_res {
+            Ok(list) => list.items,
+            Err(err) => {
+                failures.push(format!("nodes: {err}"));
+                Vec::new()
+            }
+        };
+        let pods = match pods_res {
+            Ok(list) => list.items,
+            Err(err) => {
+                failures.push(format!("pods: {err}"));
+                Vec::new()
+            }
+        };
+        let deployments = match deploy_res {
+            Ok(list) => list.items,
+            Err(err) => {
+                failures.push(format!("deployments: {err}"));
+                Vec::new()
+            }
+        };
+        let statefulsets = match sts_res {
+            Ok(list) => list.items,
+            Err(err) => {
+                failures.push(format!("statefulsets: {err}"));
+                Vec::new()
+            }
+        };
+        let daemonsets = match ds_res {
+            Ok(list) => list.items,
+            Err(err) => {
+                failures.push(format!("daemonsets: {err}"));
+                Vec::new()
+            }
+        };
+        let replicasets = match rs_res {
+            Ok(list) => list.items,
+            Err(err) => {
+                failures.push(format!("replicasets: {err}"));
+                Vec::new()
+            }
+        };
+        let events = match events_res {
+            Ok(list) => list.items,
+            Err(err) => {
+                failures.push(format!("events: {err}"));
+                Vec::new()
+            }
+        };
+
+        // A dropped tunnel or stopped k3s service makes every list call fail.
+        // Returning an empty snapshot here would make the UI look like a
+        // healthy cluster with zero pods and zero nodes, so surface the failure
+        // instead and let the caller mark the connection offline.
+        if failures.len() == 7 {
+            return Err(anyhow!(
+                "could not read the cluster API: {}",
+                failures.first().cloned().unwrap_or_default()
+            ));
+        }
+
+        let warnings = failures
+            .into_iter()
+            .map(|failure| format!("Could not read {failure}"))
+            .collect::<Vec<_>>();
 
         let metrics = self.fetch_metrics().await.unwrap_or_default();
         let rs_to_deploy = build_replicaset_owner_map(&replicasets);
@@ -179,7 +234,11 @@ impl ClusterClient {
                 server: self.server.clone(),
                 context: self.context.clone(),
                 latency_ms: latency,
-                connection: "connected".to_string(),
+                connection: if warnings.is_empty() {
+                    "connected".to_string()
+                } else {
+                    "degraded".to_string()
+                },
             },
             nodes: node_summaries,
             pods: pod_summaries,
@@ -187,6 +246,7 @@ impl ClusterClient {
             namespaces,
             events: event_summaries,
             metrics_available: metrics.available,
+            warnings,
             generated_at: now_iso(),
         })
     }
@@ -1472,4 +1532,47 @@ fn security_report_from_dynamic(obj: &DynamicObject) -> SecurityReport {
 #[allow(dead_code)]
 fn resource_requirements_from_value(value: &Value) -> ResourceRequirements {
     serde_json::from_value(value.clone()).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::convert::Infallible;
+
+    use bytes::Bytes;
+    use http::{Request, Response, StatusCode};
+    use http_body_util::Full;
+    use tower::service_fn;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn all_failed_lists_return_an_error_instead_of_an_empty_snapshot() {
+        let service = service_fn(|_request: Request<kube::client::Body>| async {
+            let body = br#"{"kind":"Status","apiVersion":"v1","status":"Failure","message":"API server is offline","reason":"ServiceUnavailable","code":503}"#;
+            let response = Response::builder()
+                .status(StatusCode::SERVICE_UNAVAILABLE)
+                .header("content-type", "application/json")
+                .body(Full::new(Bytes::from_static(body)))
+                .expect("test response should build");
+            Ok::<_, Infallible>(response)
+        });
+        let cluster = ClusterClient {
+            client: Client::new(service, "default"),
+            config: Config::new("http://127.0.0.1:1".parse().expect("valid test URI")),
+            kubeconfig_path: String::new(),
+            context: "offline-test".to_string(),
+            server: "http://127.0.0.1:1".to_string(),
+            cluster_name: "offline-test".to_string(),
+        };
+
+        let error = cluster
+            .snapshot()
+            .await
+            .expect_err("a fully failed snapshot must not look like a healthy empty cluster");
+
+        assert!(
+            error.to_string().contains("could not read the cluster API"),
+            "unexpected error: {error}"
+        );
+    }
 }

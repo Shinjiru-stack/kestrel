@@ -154,7 +154,7 @@ pub struct AppearanceSettings {
 impl Default for AppearanceSettings {
     fn default() -> Self {
         Self {
-            theme: "dark".into(),
+            theme: "light".into(),
             density: "comfortable".into(),
             reduce_motion: false,
             show_seconds: false,
@@ -238,11 +238,20 @@ pub fn default_kubeconfig() -> String {
     if let Ok(path) = std::env::var("KUBECONFIG")
         && !path.trim().is_empty()
     {
-        return path.split(';').next().unwrap_or(path.as_str()).to_string();
+        let separator = if cfg!(windows) { ';' } else { ':' };
+        return path
+            .split(separator)
+            .find(|entry| !entry.trim().is_empty())
+            .unwrap_or(path.as_str())
+            .trim()
+            .to_string();
     }
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_default();
+    let home = if cfg!(windows) {
+        std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME"))
+    } else {
+        std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE"))
+    }
+    .unwrap_or_default();
     if !home.is_empty() {
         // Prefer an explicit k3s kubeconfig when the operator has one,
         // otherwise fall back to the standard kubeconfig.

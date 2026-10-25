@@ -80,6 +80,11 @@ export const bridge = {
     return call("get_audit");
   },
 
+  async checkForUpdates() {
+    if (!isTauri) return mock.checkForUpdates();
+    return call("check_for_updates");
+  },
+
   async openUrl(url) {
     if (!isTauri) {
       window.open(url, "_blank", "noopener,noreferrer");

@@ -6,3 +6,4 @@ pub mod healer;
 pub mod kube_client;
 pub mod models;
 pub mod settings;
+pub mod updates;
