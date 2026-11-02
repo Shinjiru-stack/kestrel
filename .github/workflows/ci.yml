@@ -43,8 +43,10 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
-      - name: Build release binary
-        run: cargo build --release -p kestrel
+      # No release build here on purpose. This job gates the four bundle jobs, so
+      # anything slow in it delays every platform. Each bundle job already runs a
+      # release compile of this same commit, so a release-only breakage still
+      # fails the pipeline - just in the bundle that hits it, not before all four.
 
   bundle:
     name: Bundle ${{ matrix.name }}
