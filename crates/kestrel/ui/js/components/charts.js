@@ -335,6 +335,66 @@ export function severityBar(summary) {
   </div>`;
 }
 
+/* A dense, material utilization grid: one row per node, one cell per time
+   bucket. Empty buckets stay hollow rather than being drawn as zero, so a
+   missing sample never looks like a quiet node. */
+export function utilizationHeatmap(rows, options = {}) {
+  const columns = Math.max(1, Number(options.columns) || 26);
+  const times = options.times || [];
+  const labels = options.labels || [];
+  const metricLabel = options.metric === "memory" ? "memory" : "CPU";
+  const span = times.length > 1 ? Number(times[times.length - 1]) - Number(times[0]) : 0;
+  const withDate = span > 3 * 60 * 60 * 1000;
+  const timeLabels = times.map((t) => {
+    const date = new Date(Number(t));
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat(undefined, {
+      month: withDate ? "short" : undefined,
+      day: withDate ? "numeric" : undefined,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  });
+
+  const colorFor = (value) => {
+    if (value == null) return "";
+    const percent = clamp(Number(value), 0, 1) * 100;
+    const tone =
+      percent >= 85 ? "var(--coral)" : percent >= 70 ? "var(--amber)" : percent >= 35 ? "var(--mint)" : "var(--cyan)";
+    const alpha = Math.round(16 + (percent / 100) * 68);
+    return `color-mix(in srgb, ${tone} ${alpha}%, transparent)`;
+  };
+
+  const body = rows
+    .map((row) => {
+      const cells = (row.values || [])
+        .map((value, index) => {
+          const title = value == null
+            ? `${row.name} · ${timeLabels[index] || ""} · no sample`
+            : `${row.name} · ${timeLabels[index] || ""} · ${metricLabel} ${Math.round(Number(value) * 100)}%`;
+          return `<i class="health-heatmap__cell"${value == null ? ` data-empty="true"` : ""} style="${value == null ? "" : `background:${colorFor(value)}`}" title="${escapeHtml(title)}"></i>`;
+        })
+        .join("");
+      return `<div class="health-heatmap__row">
+        <div class="health-heatmap__label">
+          <span class="health-heatmap__dot" data-band="${escapeHtml(row.band || "unknown")}"></span>
+          <strong title="${escapeHtml(row.name)}">${escapeHtml(row.name.length > 16 ? `${row.name.slice(0, 14)}…` : row.name)}</strong>
+          <em>${row.avg == null ? "—" : `${Math.round(Number(row.avg) * 100)}%`}</em>
+        </div>
+        ${cells}
+      </div>`;
+    })
+    .join("");
+
+  return `<div class="health-heatmap" style="--heat-cols:${columns}">
+    <div class="health-heatmap__axis">
+      <span class="health-heatmap__axis-label">${escapeHtml(metricLabel)}</span>
+      <div class="health-heatmap__ticks">${labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}</div>
+    </div>
+    ${body}
+  </div>`;
+}
+
 export function metricLabel(kind, value) {
   if (kind === "cpu") return fmtCpu(value);
   if (kind === "memory") return fmtMemory(value);

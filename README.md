@@ -313,6 +313,7 @@ The model is advisory. Evidence and the exact mutation are the source of truth.
 | `Ctrl R` | Refresh the cluster snapshot |
 | `G` then `O` | Go to Overview |
 | `G` then `W` | Go to Workloads |
+| `G` then `H` | Go to Health |
 | `G` then `N` | Go to Nodes |
 | `G` then `C` | Go to Copilot |
 | `G` then `S` | Go to Security |

@@ -154,6 +154,71 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # Every push to main uploads bundles as workflow artifacts, which expire and
+  # are easy to miss. This keeps a downloadable rolling build on the Releases
+  # page so "latest main" is always installable, while tagged commits still get
+  # their own immutable versioned release below.
+  snapshot:
+    name: Publish rolling main build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Download bundles
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Combine checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          rm -f SHA256SUMS.txt
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # Every push gets its own immutable tag and release. The run number only
+      # ever moves forward, so build tags never collide and each download stays
+      # pinned to the commit that produced it.
+      - name: Resolve build tag
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 '^version[[:space:]]*=' Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$version" ]; then
+            echo "could not read the workspace version from Cargo.toml" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v${version}-build.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish build pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.build.outputs.tag }}
+          name: Kestrel ${{ steps.build.outputs.version }} build ${{ github.run_number }}
+          body: |
+            Automated build of `${{ github.sha }}` on `main`.
+
+            - Version: `${{ steps.build.outputs.version }}`
+            - Build: `${{ github.run_number }}`
+            - Commit: `${{ github.sha }}`
+
+            These bundles are unsigned development builds. Tagged `v*` releases are the stable ones.
+          files: dist/*
+          prerelease: true
+          make_latest: false
+          fail_on_unmatched_files: true
+
   release:
     name: Publish GitHub release
     if: startsWith(github.ref, 'refs/tags/v')

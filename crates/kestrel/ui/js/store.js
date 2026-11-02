@@ -13,6 +13,8 @@ export const state = {
   pulseRange: "1h",
   pulseMetric: "both",
   pulseHover: null,
+  healthRange: "1h",
+  healthMetric: "cpu",
   settings: null,
   audit: [],
   route: "overview",

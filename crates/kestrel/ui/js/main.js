@@ -39,11 +39,12 @@ import { renderOverview } from "./views/overview.js";
 import { renderPulse } from "./views/pulse.js";
 import { renderWorkloads } from "./views/workloads.js";
 import { renderNodes } from "./views/nodes.js";
+import { renderHealth } from "./views/health.js";
 import { renderCopilot } from "./views/copilot.js";
 import { renderSecurity } from "./views/security.js";
 import { renderSettings } from "./views/settings.js";
 
-const ROUTES = new Set(["overview", "pulse", "workloads", "nodes", "copilot", "security", "settings"]);
+const ROUTES = new Set(["overview", "pulse", "health", "workloads", "nodes", "copilot", "security", "settings"]);
 const DEFAULT_SAFETY = {
   protectedNamespaces: ["kube-system", "kube-public", "kube-node-lease"],
   requireConfirmation: true,
@@ -548,6 +549,9 @@ function currentView() {
   switch (state.route) {
     case "pulse":
       view = renderPulse(state);
+      break;
+    case "health":
+      view = renderHealth(state);
       break;
     case "workloads":
       view = renderWorkloads(state);
@@ -1182,6 +1186,14 @@ async function handleAction(el, event) {
       state.pulseMetric = el.dataset.metric || "both";
       emit();
       break;
+    case "health-range":
+      state.healthRange = el.dataset.range || "1h";
+      emit();
+      break;
+    case "health-metric":
+      state.healthMetric = el.dataset.metric === "memory" ? "memory" : "cpu";
+      emit();
+      break;
     case "security-select":
       state.security.selected = name;
       emit();
@@ -1478,6 +1490,7 @@ function handleKeydown(event) {
         <div class="shortcut-row"><span>Refresh snapshot</span><kbd>Ctrl R</kbd></div>
         <div class="shortcut-row"><span>Overview</span><kbd>G then O</kbd></div>
         <div class="shortcut-row"><span>Pulse</span><kbd>G then P</kbd></div>
+        <div class="shortcut-row"><span>Health</span><kbd>G then H</kbd></div>
         <div class="shortcut-row"><span>Workloads</span><kbd>G then W</kbd></div>
         <div class="shortcut-row"><span>Nodes</span><kbd>G then N</kbd></div>
         <div class="shortcut-row"><span>Copilot</span><kbd>G then C</kbd></div>
@@ -1492,7 +1505,7 @@ function handleKeydown(event) {
     return;
   }
   if (!typing && Date.now() - gPrefixAt < 1200) {
-    const map = { o: "overview", p: "pulse", w: "workloads", n: "nodes", c: "copilot", s: "security", ",": "settings" };
+    const map = { o: "overview", p: "pulse", h: "health", w: "workloads", n: "nodes", c: "copilot", s: "security", ",": "settings" };
     const route = map[event.key.toLowerCase()];
     if (route) {
       event.preventDefault();

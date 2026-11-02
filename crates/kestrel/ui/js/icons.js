@@ -9,7 +9,7 @@ const ICONS = new Set([
   "more", "close", "minimize", "maximize", "restore", "moon", "sun", "user",
   "github", "key", "zap", "layers", "git-branch", "lock", "eye", "send", "stop",
   "wand", "external", "database", "bell-off", "circle", "half", "rotate", "bolt",
-  "shield-check", "file", "pulse",
+  "shield-check", "file", "pulse", "heart",
 ]);
 
 export function icon(name, className = "") {
