@@ -36,13 +36,14 @@ import {
   downloadLogs,
 } from "./components/pod-drawer.js";
 import { renderOverview } from "./views/overview.js";
+import { renderPulse } from "./views/pulse.js";
 import { renderWorkloads } from "./views/workloads.js";
 import { renderNodes } from "./views/nodes.js";
 import { renderCopilot } from "./views/copilot.js";
 import { renderSecurity } from "./views/security.js";
 import { renderSettings } from "./views/settings.js";
 
-const ROUTES = new Set(["overview", "workloads", "nodes", "copilot", "security", "settings"]);
+const ROUTES = new Set(["overview", "pulse", "workloads", "nodes", "copilot", "security", "settings"]);
 const DEFAULT_SAFETY = {
   protectedNamespaces: ["kube-system", "kube-public", "kube-node-lease"],
   requireConfirmation: true,
@@ -149,19 +150,47 @@ function aggregatePoint(snapshot) {
   return { t: Date.now(), cpu: Math.max(0, Math.min(1, cpu)), memory: Math.max(0, Math.min(1, memory)) };
 }
 
+function recordNodeHistory(snapshot) {
+  if (snapshot?.nodeHistory && typeof snapshot.nodeHistory === "object") {
+    state.nodeHistory = snapshot.nodeHistory;
+    return;
+  }
+  const now = Date.now();
+  const next = {};
+  for (const node of snapshot?.nodes || []) {
+    const previous = state.nodeHistory[node.name] || [];
+    const last = previous[previous.length - 1];
+    if (last && now - (Number(last.t) || 0) < 2500) {
+      next[node.name] = previous;
+      continue;
+    }
+    const cpu =
+      node.cpuUsage == null
+        ? null
+        : Number(node.cpuUsage) / (Number(node.cpuCores) || 1);
+    const memory =
+      node.memoryUsage == null
+        ? null
+        : Number(node.memoryUsage) / (Number(node.memoryBytes) || 1);
+    next[node.name] = [...previous, { t: now, cpu, memory }].slice(-4320);
+  }
+  state.nodeHistory = next;
+}
+
 function applySnapshot(snapshot) {
   if (!snapshot) return;
   state.snapshot = snapshot;
   state.connected = true;
   state.connectionError = "";
   if (Array.isArray(snapshot.history) && snapshot.history.length) {
-    state.history = snapshot.history.slice(-48);
+    state.history = snapshot.history.slice(-4320);
   } else {
     const last = state.history[state.history.length - 1];
     if (!last || Date.now() - (Number(last.t) || 0) > 2500) {
-      state.history = [...state.history, aggregatePoint(snapshot)].slice(-48);
+      state.history = [...state.history, aggregatePoint(snapshot)].slice(-4320);
     }
   }
+  recordNodeHistory(snapshot);
   state.lastUpdated = new Date();
   emit();
 }
@@ -169,6 +198,8 @@ function applySnapshot(snapshot) {
 function resetClusterData() {
   state.snapshot = null;
   state.history = [];
+  state.nodeHistory = {};
+  state.pulseHover = null;
   state.lastUpdated = null;
   state.security = {
     ...state.security,
@@ -515,6 +546,9 @@ function currentView() {
   }
   let view = "";
   switch (state.route) {
+    case "pulse":
+      view = renderPulse(state);
+      break;
     case "workloads":
       view = renderWorkloads(state);
       break;
@@ -599,6 +633,8 @@ function render() {
     view.innerHTML = viewHtml;
     lastViewHtml = viewHtml;
     lastViewRoute = viewKey;
+    if (state.route === "pulse") restorePulseHover();
+    else state.pulseHover = null;
   }
 
   const drawer = document.getElementById("drawer");
@@ -1138,6 +1174,14 @@ async function handleAction(el, event) {
       state.filters.page = Number(el.dataset.page) || 1;
       emit();
       break;
+    case "pulse-range":
+      state.pulseRange = el.dataset.range || "1h";
+      emit();
+      break;
+    case "pulse-metric":
+      state.pulseMetric = el.dataset.metric || "both";
+      emit();
+      break;
     case "security-select":
       state.security.selected = name;
       emit();
@@ -1433,6 +1477,7 @@ function handleKeydown(event) {
         <div class="shortcut-row"><span>Command palette</span><kbd>Ctrl K</kbd></div>
         <div class="shortcut-row"><span>Refresh snapshot</span><kbd>Ctrl R</kbd></div>
         <div class="shortcut-row"><span>Overview</span><kbd>G then O</kbd></div>
+        <div class="shortcut-row"><span>Pulse</span><kbd>G then P</kbd></div>
         <div class="shortcut-row"><span>Workloads</span><kbd>G then W</kbd></div>
         <div class="shortcut-row"><span>Nodes</span><kbd>G then N</kbd></div>
         <div class="shortcut-row"><span>Copilot</span><kbd>G then C</kbd></div>
@@ -1447,7 +1492,7 @@ function handleKeydown(event) {
     return;
   }
   if (!typing && Date.now() - gPrefixAt < 1200) {
-    const map = { o: "overview", w: "workloads", n: "nodes", c: "copilot", s: "security", ",": "settings" };
+    const map = { o: "overview", p: "pulse", w: "workloads", n: "nodes", c: "copilot", s: "security", ",": "settings" };
     const route = map[event.key.toLowerCase()];
     if (route) {
       event.preventDefault();
@@ -1455,6 +1500,81 @@ function handleKeydown(event) {
       navigate(route);
     }
   }
+}
+
+function hidePulseHover() {
+  state.pulseHover = null;
+  document.querySelectorAll(".pulse-chart__tooltip, .pulse-chart__crosshair").forEach((node) => {
+    node.hidden = true;
+  });
+}
+
+function pulseTooltipHtml(payload, index) {
+  const time = new Date(Number(payload.times[index]));
+  const timeLabel = Number.isNaN(time.getTime())
+    ? ""
+    : time.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const rows = (payload.series || [])
+    .map((series) => {
+      const value = series.values?.[index];
+      const display = value == null || !Number.isFinite(Number(value)) ? "—" : `${Math.round(Number(value) * 100)}%`;
+      return `<div class="pulse-chart__tooltip-row"><span><i style="background:${series.color}"></i>${escapeHtml(series.name)}</span><b>${display}</b></div>`;
+    })
+    .join("");
+  return `<div class="pulse-chart__tooltip-time">${escapeHtml(timeLabel)}</div>${rows}`;
+}
+
+function paintPulseHover(chart, ratio) {
+  const svg = chart.querySelector("svg");
+  const tooltip = chart.querySelector(".pulse-chart__tooltip");
+  const crosshair = chart.querySelector(".pulse-chart__crosshair");
+  if (!svg || !tooltip || !crosshair) return;
+  let payload;
+  try {
+    payload = JSON.parse(decodeURIComponent(chart.dataset.pulse || ""));
+  } catch {
+    return;
+  }
+  if (!payload.times?.length) return;
+  const rect = svg.getBoundingClientRect();
+  if (!rect.width) return;
+  const width = Number(chart.dataset.chartWidth) || 1000;
+  const padX = Number(chart.dataset.padX) || 44;
+  const plotW = width - padX - 12;
+  const clampedRatio = Math.max(0, Math.min(1, ratio));
+  const x = padX + clampedRatio * plotW;
+  const index = Math.round(clampedRatio * (payload.times.length - 1));
+  crosshair.hidden = false;
+  crosshair.style.left = `${(x / width) * 100}%`;
+  tooltip.hidden = false;
+  tooltip.innerHTML = pulseTooltipHtml(payload, index);
+  const px = (x / width) * rect.width;
+  tooltip.style.left = `${Math.max(8, Math.min(rect.width - 176, px))}px`;
+}
+
+function restorePulseHover() {
+  if (state.route !== "pulse" || !state.pulseHover) return;
+  const chart = document.querySelector(".pulse-chart");
+  if (chart) paintPulseHover(chart, state.pulseHover.ratio);
+}
+
+function handlePulsePointer(event) {
+  const chart = event.target.closest?.(".pulse-chart");
+  if (!chart) {
+    hidePulseHover();
+    return;
+  }
+  const svg = chart.querySelector("svg");
+  if (!svg) return;
+  const rect = svg.getBoundingClientRect();
+  if (!rect.width) return;
+  const width = Number(chart.dataset.chartWidth) || 1000;
+  const padX = Number(chart.dataset.padX) || 44;
+  const plotW = width - padX - 12;
+  const x = event.clientX - rect.left;
+  const ratio = Math.max(0, Math.min(1, (x / rect.width * width - padX) / plotW));
+  state.pulseHover = { ratio };
+  paintPulseHover(chart, ratio);
 }
 
 function bindEvents() {
@@ -1489,6 +1609,8 @@ function bindEvents() {
     event.preventDefault();
     handleAction(actionEl, event);
   });
+
+  document.addEventListener("pointermove", handlePulsePointer);
 
   document.addEventListener("change", (event) => {
     const el = event.target.closest("[data-action]");

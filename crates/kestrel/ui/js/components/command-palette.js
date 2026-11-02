@@ -12,6 +12,7 @@ export function configurePalette(handler) {
 function pageItems() {
   return [
     { id: "nav-overview", group: "Navigate", title: "Overview", sub: "Cluster vitals, signals, attention queue", icon: "grid", action: { type: "navigate", route: "overview" } },
+    { id: "nav-pulse", group: "Navigate", title: "Pulse", sub: "Capacity, node balance, CPU and memory history", icon: "activity", action: { type: "navigate", route: "pulse" } },
     { id: "nav-workloads", group: "Navigate", title: "Workloads", sub: "Pods, deployments, statefulsets, daemonsets", icon: "cube", action: { type: "navigate", route: "workloads" } },
     { id: "nav-nodes", group: "Navigate", title: "Nodes", sub: "Capacity, pressure, topology", icon: "server", action: { type: "navigate", route: "nodes" } },
     { id: "nav-copilot", group: "Navigate", title: "AI Copilot", sub: "Diagnose and reason about the cluster", icon: "sparkles", action: { type: "navigate", route: "copilot" } },

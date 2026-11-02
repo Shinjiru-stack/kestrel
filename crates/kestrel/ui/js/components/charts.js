@@ -1,6 +1,6 @@
 /* Hand-built SVG charts. No chart library, no canvas, no dependency. */
 
-import { clamp, fmtCpu, fmtMemory } from "../format.js";
+import { clamp, escapeHtml, fmtCpu, fmtMemory } from "../format.js";
 
 let chartId = 0;
 const nextId = (prefix) => `${prefix}-${++chartId}`;
@@ -122,6 +122,168 @@ export function areaChart(series, options = {}) {
       <line class="chart__hover-line" x1="${padX}" y1="${padTop}" x2="${padX}" y2="${padTop + plotH}"/>
     </svg>
     <div class="chart-tooltip"><div class="chart-tooltip__time">now</div><div class="chart-tooltip__row"><span><i></i>CPU</span><b>—</b></div><div class="chart-tooltip__row"><span><i style="background:var(--cyan)"></i>Memory</span><b>—</b></div></div>
+  </div>`;
+}
+
+export function pulseChart(series, options = {}) {
+  const width = options.width || 1000;
+  const height = options.height || 300;
+  const padX = options.padX ?? 44;
+  const padTop = options.padTop ?? 22;
+  const padBottom = options.padBottom ?? 30;
+  const max = options.max ?? 1;
+  const min = options.min ?? 0;
+  const gridCount = options.gridCount ?? 4;
+  const labels = options.labels || [];
+  const times = options.times || [];
+  const threshold = options.threshold;
+  const id = nextId("pulse");
+  const plotH = height - padTop - padBottom;
+  const plotW = width - padX - 12;
+  const count = Math.max(1, ...series.map((s) => s.values?.length || 0));
+  const xFor = (i) => padX + (i / Math.max(1, count - 1)) * plotW;
+  const yFor = (value) => padTop + (1 - clamp((Number(value) - min) / (max - min), 0, 1)) * plotH;
+
+  const grid = Array.from({ length: gridCount + 1 }, (_, i) => {
+    const y = padTop + (i / gridCount) * plotH;
+    return `<line class="chart__grid" x1="${padX}" y1="${y.toFixed(1)}" x2="${width - 12}" y2="${y.toFixed(1)}"/>`;
+  }).join("");
+
+  const yLabels = Array.from({ length: gridCount + 1 }, (_, i) => {
+    const value = max - (i / gridCount) * (max - min);
+    const y = padTop + (i / gridCount) * plotH;
+    return `<text class="chart__axis" x="${padX - 9}" y="${y + 3}" text-anchor="end">${Math.round(value * 100)}%</text>`;
+  }).join("");
+
+  const xLabels = labels
+    .map((label, i) => {
+      const x = labels.length === 1 ? width - 12 : padX + (i / Math.max(1, labels.length - 1)) * plotW;
+      const anchor = labels.length === 1 ? "end" : i === 0 ? "start" : i === labels.length - 1 ? "end" : "middle";
+      return `<text class="chart__axis" x="${x.toFixed(1)}" y="${height - 6}" text-anchor="${anchor}">${escapeHtml(label)}</text>`;
+    })
+    .join("");
+
+  const thresholdLine =
+    threshold == null
+      ? ""
+      : `<line class="pulse-chart__threshold" x1="${padX}" y1="${yFor(threshold).toFixed(1)}" x2="${width - 12}" y2="${yFor(threshold).toFixed(1)}"/>
+        <text class="pulse-chart__threshold-label" x="${width - 14}" y="${(yFor(threshold) - 6).toFixed(1)}" text-anchor="end">${Math.round(threshold * 100)}% pressure</text>`;
+
+  const paths = series
+    .map((s, idx) => {
+      const values = s.values || [];
+      const segments = [];
+      let current = [];
+      values.forEach((value, i) => {
+        if (value == null || !Number.isFinite(Number(value))) {
+          if (current.length) segments.push(current);
+          current = [];
+        } else {
+          current.push([xFor(i), yFor(Number(value))]);
+        }
+      });
+      if (current.length) segments.push(current);
+      return segments
+        .map((points, segmentIndex) => {
+          const line = smoothPath(points);
+          const area =
+            points.length > 1
+              ? `${line} L ${points[points.length - 1][0].toFixed(2)} ${padTop + plotH} L ${points[0][0].toFixed(2)} ${padTop + plotH} Z`
+              : "";
+          const gradientId = `${id}-${idx}-${segmentIndex}`;
+          const last = points[points.length - 1];
+          return `<defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${s.color || "var(--mint)"}" stop-opacity=".42"/>
+              <stop offset="100%" stop-color="${s.color || "var(--mint)"}" stop-opacity="0"/>
+            </linearGradient></defs>
+            ${area ? `<path d="${area}" fill="url(#${gradientId})" class="pulse-chart__area"/>` : ""}
+            <path d="${line}" class="pulse-chart__line" stroke="${s.color || "var(--mint)"}"/>
+            <circle class="pulse-chart__last" cx="${last[0].toFixed(2)}" cy="${last[1].toFixed(2)}" r="3.6" fill="${s.color || "var(--mint)"}"/>`;
+        })
+        .join("");
+    })
+    .join("");
+
+  const payload = encodeURIComponent(
+    JSON.stringify({
+      times,
+      series: series.map((s) => ({
+        name: s.name,
+        color: s.color || "var(--mint)",
+        values: s.values || [],
+      })),
+    })
+  );
+
+  return `<div class="pulse-chart" data-pulse="${payload}" data-pad-x="${padX}" data-chart-width="${width}" style="--pulse-pad-x:${padX};--pulse-pad-top:${padTop};--pulse-pad-bottom:${padBottom}">
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Cluster CPU and memory usage over time">
+      ${grid}${thresholdLine}${yLabels}${xLabels}${paths}
+    </svg>
+    <div class="pulse-chart__crosshair" hidden></div>
+    <div class="pulse-chart__tooltip" hidden></div>
+  </div>`;
+}
+
+export function utilizationScatter(nodes, options = {}) {
+  const width = options.width || 360;
+  const height = options.height || 300;
+  const padLeft = 38;
+  const padTop = 18;
+  const padBottom = 30;
+  const plotW = width - padLeft - 14;
+  const plotH = height - padTop - padBottom;
+  const xFor = (value) => padLeft + (clamp(value, 0, 100) / 100) * plotW;
+  const yFor = (value) => padTop + (1 - clamp(value, 0, 100) / 100) * plotH;
+  const id = nextId("scatter");
+  const tone = (state) =>
+    ({
+      idle: "var(--cyan)",
+      balanced: "var(--mint)",
+      hot: "var(--amber)",
+      saturated: "var(--coral)",
+      unknown: "var(--text-faint)",
+    })[state] || "var(--text-faint)";
+
+  const ticks = [0, 50, 100]
+    .map(
+      (value) => `<text class="chart__axis" x="${xFor(value).toFixed(1)}" y="${height - 8}" text-anchor="middle">${value}%</text>
+        <text class="chart__axis" x="${padLeft - 8}" y="${(yFor(value) + 3).toFixed(1)}" text-anchor="end">${value}%</text>`
+    )
+    .join("");
+
+  const bubbles = nodes
+    .filter((n) => n.cpuPct != null && n.memPct != null)
+    .map((n) => {
+      const r = Math.min(24, 11 + Math.sqrt(Math.max(1, Number(n.pods) || 1)) * 1.3);
+      const color = tone(n.state);
+      const label = n.name.length > 15 ? `${n.name.slice(0, 13)}…` : n.name;
+      return `<g class="pulse-scatter__node" data-action="node-pods" data-node="${escapeHtml(n.name)}" tabindex="0" role="button" aria-label="${escapeHtml(n.name)}: ${Math.round(n.cpuPct)} percent CPU, ${Math.round(n.memPct)} percent memory">
+        <title>${escapeHtml(n.name)} — ${Math.round(n.cpuPct)}% CPU, ${Math.round(n.memPct)}% memory, ${n.pods || 0} pods</title>
+        <circle cx="${xFor(n.cpuPct).toFixed(1)}" cy="${yFor(n.memPct).toFixed(1)}" r="${r.toFixed(1)}" fill="${color}" fill-opacity=".16" stroke="${color}" stroke-width="1.4"/>
+        <circle cx="${xFor(n.cpuPct).toFixed(1)}" cy="${yFor(n.memPct).toFixed(1)}" r="2.2" fill="${color}"/>
+        <text x="${xFor(n.cpuPct).toFixed(1)}" y="${(yFor(n.memPct) + r + 11).toFixed(1)}" text-anchor="middle">${escapeHtml(label)}</text>
+      </g>`;
+    })
+    .join("");
+
+  return `<div class="pulse-scatter" data-chart="scatter">
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Node CPU and memory utilization balance">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="var(--mint)" stop-opacity=".08"/>
+        <stop offset="100%" stop-color="var(--cyan)" stop-opacity=".02"/>
+      </linearGradient></defs>
+      <rect x="${xFor(25).toFixed(1)}" y="${yFor(75).toFixed(1)}" width="${(xFor(70) - xFor(25)).toFixed(1)}" height="${(yFor(25) - yFor(75)).toFixed(1)}" rx="10" fill="url(#${id})" stroke="var(--line-accent)" stroke-dasharray="3 4"/>
+      <line class="chart__grid" x1="${xFor(50).toFixed(1)}" y1="${padTop}" x2="${xFor(50).toFixed(1)}" y2="${padTop + plotH}"/>
+      <line class="chart__grid" x1="${padLeft}" y1="${yFor(50).toFixed(1)}" x2="${width - 14}" y2="${yFor(50).toFixed(1)}"/>
+      <text class="pulse-scatter__zone" x="${xFor(14).toFixed(1)}" y="${(yFor(16) + 3).toFixed(1)}">idle</text>
+      <text class="pulse-scatter__zone" x="${xFor(78).toFixed(1)}" y="${(yFor(16) + 3).toFixed(1)}">cpu hot</text>
+      <text class="pulse-scatter__zone" x="${xFor(12).toFixed(1)}" y="${(yFor(84) + 3).toFixed(1)}">memory hot</text>
+      <text class="pulse-scatter__zone" x="${xFor(98).toFixed(1)}" y="${(yFor(96) + 3).toFixed(1)}" text-anchor="end">saturated</text>
+      ${ticks}
+      <text class="pulse-scatter__axis-label" x="${(padLeft + plotW / 2).toFixed(1)}" y="${height - 1}" text-anchor="middle">CPU utilization</text>
+      <text class="pulse-scatter__axis-label" transform="translate(10 ${(padTop + plotH / 2).toFixed(1)}) rotate(-90)" text-anchor="middle">memory utilization</text>
+      ${bubbles}
+    </svg>
   </div>`;
 }
 

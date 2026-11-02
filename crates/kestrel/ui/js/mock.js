@@ -167,16 +167,51 @@ function event({ type = "Warning", reason, message, namespace, kind, name, count
 
 function history() {
   const out = [];
-  for (let i = 35; i >= 0; i -= 1) {
-    const t = NOW - i * 5 * 60 * 1000;
-    const wave = Math.sin((35 - i) / 4.2) * 0.06 + Math.sin((35 - i) / 11) * 0.035;
+  const points = 24 * 60 / 2;
+  for (let i = points - 1; i >= 0; i -= 1) {
+    const t = NOW - i * 2 * 60 * 1000;
+    const phase = (points - i) / points;
+    const cpu =
+      0.46 +
+      Math.sin(phase * Math.PI * 4.2) * 0.075 +
+      Math.sin(phase * Math.PI * 17) * 0.028 +
+      Math.cos(phase * Math.PI * 31) * 0.014 +
+      Math.sin(phase * Math.PI * 96) * 0.022 +
+      Math.cos(phase * Math.PI * 288) * 0.009;
+    const memory =
+      0.55 +
+      Math.sin(phase * Math.PI * 3.1 + 0.7) * 0.06 +
+      Math.sin(phase * Math.PI * 13) * 0.022 +
+      Math.sin(phase * Math.PI * 80) * 0.014;
     out.push({
       t,
-      cpu: Math.max(0.18, 0.42 + wave + (i % 5) * 0.006),
-      memory: Math.max(0.22, 0.48 + wave * 0.8 + (i % 7) * 0.004),
+      cpu: Math.max(0.18, Math.min(0.82, cpu)),
+      memory: Math.max(0.22, Math.min(0.86, memory)),
     });
   }
   return out;
+}
+
+function nodeHistoryFor(nodes, aggregate) {
+  return Object.fromEntries(
+    nodes.map((n, index) => {
+      const cpuNow = Math.max(0.03, Math.min(0.98, (Number(n.cpuUsage) || 0) / (Number(n.cpuCores) || 1)));
+      const memNow = Math.max(0.03, Math.min(0.98, (Number(n.memoryUsage) || 0) / (Number(n.memoryBytes) || 1)));
+      return [
+        n.name,
+        aggregate.map((point, i) => {
+          const cpuDrift = (point.cpu - 0.46) * 0.32 + Math.sin(i / 17 + index * 1.7) * 0.035;
+          const memDrift = (point.memory - 0.55) * 0.28 + Math.cos(i / 23 + index * 1.1) * 0.028;
+          const last = i === aggregate.length - 1;
+          return {
+            t: point.t,
+            cpu: last ? cpuNow : Math.max(0.03, Math.min(0.98, cpuNow + cpuDrift)),
+            memory: last ? memNow : Math.max(0.03, Math.min(0.98, memNow + memDrift)),
+          };
+        }),
+      ];
+    })
+  );
 }
 
 const nodes = [
@@ -196,8 +231,8 @@ const nodes = [
     roles: ["worker"],
     cpuCores: 4,
     memoryBytes: 8 * 1024 ** 3,
-    cpuUsage: 2.28,
-    memoryUsage: 5.7 * 1024 ** 3,
+    cpuUsage: 3.04,
+    memoryUsage: 6.72 * 1024 ** 3,
     pods: 7,
     internalIp: "172.30.123.35",
     ageSeconds: 5 * DAY,
@@ -207,8 +242,8 @@ const nodes = [
     roles: ["worker"],
     cpuCores: 4,
     memoryBytes: 8 * 1024 ** 3,
-    cpuUsage: 1.12,
-    memoryUsage: 3.4 * 1024 ** 3,
+    cpuUsage: 1.78,
+    memoryUsage: 4.15 * 1024 ** 3,
     pods: 5,
     internalIp: "172.30.123.36",
     ageSeconds: 5 * DAY,
@@ -573,6 +608,25 @@ const namespaces = [
   { name: "kube-system", pods: 4, healthy: 4, warning: 0, failed: 0, cpuUsage: 0.03, memoryUsage: 132 * 1024 ** 2 },
 ];
 
+const previewHistory = history();
+const previewCpu = nodes.reduce((sum, n) => sum + (Number(n.cpuUsage) || 0), 0);
+const previewCpuCapacity = nodes.reduce((sum, n) => sum + (Number(n.cpuCores) || 0), 0);
+const previewMemory = nodes.reduce((sum, n) => sum + (Number(n.memoryUsage) || 0), 0);
+const previewMemoryCapacity = nodes.reduce((sum, n) => sum + (Number(n.memoryBytes) || 0), 0);
+const previewLast = previewHistory[previewHistory.length - 1];
+if (previewLast) {
+  const cpuTarget = previewCpu / previewCpuCapacity;
+  const memoryTarget = previewMemory / previewMemoryCapacity;
+  const cpuDelta = cpuTarget - previewLast.cpu;
+  const memoryDelta = memoryTarget - previewLast.memory;
+  for (const point of previewHistory) {
+    point.cpu = Math.max(0.12, Math.min(0.88, point.cpu + cpuDelta));
+    point.memory = Math.max(0.12, Math.min(0.88, point.memory + memoryDelta));
+  }
+  previewLast.cpu = cpuTarget;
+  previewLast.memory = memoryTarget;
+}
+
 const snapshot = {
   cluster: {
     name: "shinjiru",
@@ -590,7 +644,8 @@ const snapshot = {
   events,
   metricsAvailable: true,
   generatedAt: new Date().toISOString(),
-  history: history(),
+  history: previewHistory,
+  nodeHistory: nodeHistoryFor(nodes, previewHistory),
 };
 
 const detailOverrides = {
@@ -1338,15 +1393,34 @@ function tick() {
     if (p.cpuUsage > 0) p.cpuUsage = Math.max(0.001, p.cpuUsage + (Math.random() - 0.5) * 0.004);
     if (p.memoryUsage > 0) p.memoryUsage = Math.max(4 * 1024 ** 2, p.memoryUsage + (Math.random() - 0.5) * 2 * 1024 ** 2);
   }
+  const now = Date.now();
   const last = s.history[s.history.length - 1];
-  s.history = [
-    ...s.history.slice(-35),
-    {
-      t: Date.now(),
-      cpu: Math.max(0.1, Math.min(0.95, (last?.cpu || 0.45) + (Math.random() - 0.5) * 0.05)),
-      memory: Math.max(0.1, Math.min(0.95, (last?.memory || 0.5) + (Math.random() - 0.5) * 0.035)),
-    },
-  ];
+  const point = {
+    t: now,
+    cpu: Math.max(0.1, Math.min(0.95, (last?.cpu || 0.45) + (Math.random() - 0.5) * 0.05)),
+    memory: Math.max(0.1, Math.min(0.95, (last?.memory || 0.5) + (Math.random() - 0.5) * 0.035)),
+  };
+  s.history =
+    last && now - last.t < 60_000
+      ? [...s.history.slice(0, -1), point]
+      : [...s.history, point].slice(-1440);
+  s.nodeHistory = Object.fromEntries(
+    s.nodes.map((n) => {
+      const previous = s.nodeHistory?.[n.name] || [];
+      const previousLast = previous[previous.length - 1];
+      const nodePoint = {
+        t: now,
+        cpu: Math.max(0.03, Math.min(0.98, (Number(n.cpuUsage) || 0) / (Number(n.cpuCores) || 1))),
+        memory: Math.max(0.03, Math.min(0.98, (Number(n.memoryUsage) || 0) / (Number(n.memoryBytes) || 1))),
+      };
+      return [
+        n.name,
+        previousLast && now - previousLast.t < 60_000
+          ? [...previous.slice(0, -1), nodePoint]
+          : [...previous, nodePoint].slice(-1440),
+      ];
+    })
+  );
   return deepClone(s);
 }
 
